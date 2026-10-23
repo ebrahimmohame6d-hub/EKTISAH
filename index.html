@@ -63,6 +63,8 @@
           <div><label>موبايل العميل</label><input name="phone" inputmode="numeric" required></div>
           <div><label>المنطقة</label><select name="area_id" id="areas" required></select></div>
           <div><label>الوزن (كجم)</label><input name="weight" type="number" min="0" step="0.1" value="1" required></div>
+          <div><label>نوع الخدمة</label><select name="service_type" id="serviceType" required></select></div>
+          <div><label>حالة الشحنة</label><select name="status" id="statusSel"></select></div>
           <div class="full"><label>العنوان</label><input name="address" required></div>
           <div class="full"><label>ملاحظات</label><textarea name="notes" rows="2"></textarea></div>
         </div>
@@ -147,6 +149,31 @@
     showApp(false);
   }
 
+  function fillSelect(sel, items, placeholder, includeDefault) {
+    sel.innerHTML = '';
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = placeholder;
+    sel.appendChild(first);
+    items.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.value;
+      opt.textContent = v.label;
+      sel.appendChild(opt);
+    });
+    if (includeDefault) sel.value = includeDefault;
+  }
+
+  async function loadDropdowns() {
+    const r = await api('lists');
+    const lists = r.lists || {};
+    fillSelect($('serviceType'), (lists.service_type || []).map(v => ({ value: v, label: v })), 'اختار نوع الخدمة');
+    const statuses = (lists.status || []).map(v => ({ value: v, label: v }));
+    fillSelect($('statusSel'), statuses, 'اختار الحالة', 'جديدة');
+    if (!statuses.length) $('statusSel').innerHTML = '<option value="جديدة">جديدة</option>';
+    await loadAreas();
+  }
+
   async function loadAreas() {
     const r = await api('areas');
     const sel = $('areas');
@@ -195,7 +222,7 @@
       $('p').value = '';
       $('username').textContent = r.username;
       showApp(true);
-      await loadAreas();
+      await loadDropdowns();
       await loadList();
     } catch (e) {
       setMsg('loginMsg', e.message);
@@ -244,7 +271,7 @@
     if (!token) { showApp(false); return; }
     showApp(true);
     try {
-      await loadAreas();
+      await loadDropdowns();
       await loadList();
     } catch (e) {
       handleError(e, 'listMsg');
