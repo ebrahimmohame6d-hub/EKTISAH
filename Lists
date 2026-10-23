@@ -1,0 +1,13 @@
+list_name,value
+service_type,تسليم و تحصيل
+service_type,تسليم فقط
+service_type,مرتجع
+status,تم الاستلام في المخزن
+status,في التوصيل
+status,شحنة مؤجلة
+status,تم الارجاع للمخزن
+status,شحنة ملغاة
+status,في الطريق الي الفرع
+status,في الطريق الي الراسل
+status,مرتجعات التعريفات
+status,جديدة
