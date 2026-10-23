@@ -107,12 +107,21 @@
 
   // كل الطلبات POST بـ text/plain عشان نتفادى مشاكل CORS مع Apps Script
   async function api(action, data = {}) {
+    if (!API_URL || API_URL.includes('PUT_YOUR')) {
+      throw new Error('لازم تحط رابط Apps Script في API_URL داخل الملف');
+    }
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action, token, ...data })
     });
-    const json = await res.json();
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      throw new Error('الرابط مش بيرجع بيانات صح. اتأكد إن الـ Web App متنشر وWho has access = Anyone');
+    }
     if (json.status !== 'success') throw new Error(json.message || 'حصل خطأ');
     return json;
   }
