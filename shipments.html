@@ -35598,6 +35598,7 @@ overflow: scroll;
   <div class="ship-card">
     <div class="ship-title">بيانات الشحنة</div>
     <div class="ship-grid">
+      <div class="ship-field"><label>المندوب</label><select class="ship-input" name="delegate" id="delegateSelAdd"><option value="">بدون مندوب</option></select></div>
       <div class="ship-field"><label>نوع الخدمة</label><select class="ship-input" name="service_type" id="serviceType"></select></div>
       <div class="ship-field"><label>الوزن (كجم)</label><input class="ship-input req" name="weight" type="number" min="0" step="0.1" value="1" required></div>
       <div class="ship-field"><label>مبلغ التحصيل</label><input class="ship-input req" name="cod_amount" type="number" min="0" step="0.01" value="0"></div>
@@ -36048,10 +36049,10 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
     window.__siteNoteT=setTimeout(function(){ el.style.display='none'; },2500);
   }
   var RULES=[
-    ['شحنات المناديب','operations.html?view=delegates'],
-    ['شحنات الراسلين','operations.html?view=senders'],
-    ['المؤجلات','operations.html?view=postponed'],
-    ['تجاوزت أيام','operations.html?view=overdue'],
+    ['شحنات المناديب','delegates.html'],
+    ['شحنات الراسلين','senders.html'],
+    ['المؤجلات','postponed.html'],
+    ['تجاوزت أيام','overdue.html'],
     ['كافة الشحنات','operations.html?view=all'],
     ['متابعة المرتجعات','operations.html?view=returns'],
     ['فحص الشحنات','operations.html?view=barcode'],
@@ -36119,7 +36120,7 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
   }
 
   function loadData(){
-    return Promise.all([api('areas'), api('lists')]).then(function(res){
+    return api('delegates').then(function(d){ fill($('delegateSelAdd'), d.delegates.map(function(x){ return {value:x.name,label:x.name}; }), 'بدون مندوب'); }).catch(function(){}).then(function(){ return Promise.all([api('areas'), api('lists')]); }).then(function(res){
       fill($('areas'), res[0].areas.map(function(a){ return {value:a.id, label:a.name}; }), 'اختار المنطقة');
       var lists = res[1].lists || {};
       fill($('serviceType'), (lists.service_type||[]).map(function(v){ return {value:v,label:v}; }), 'اختار نوع الخدمة');
