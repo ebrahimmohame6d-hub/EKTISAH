@@ -35522,22 +35522,20 @@ overflow: scroll;
   .dl-filter label { color:#333; }
   .dl-select { height:40px; min-width:260px; border:1px solid #cfd6e0; border-radius:3px; padding:0 10px; background:#fff; }
   .dl-pill { background:#213d7b; color:#fff; border:0; border-radius:20px; padding:10px 22px; cursor:pointer; font-size:14px; }
-  .dl-pill.gray { background:#64748b; }
-  .dl-pill.orange { background:#ec6821; }
   .dl-pill[disabled] { opacity:.6; cursor:default; }
-  .dl-person { display:flex; flex-direction:column; align-items:center; min-width:200px; }
-  .dl-person .ava { width:90px; height:90px; border-radius:50%; background:#d6d9de; display:flex; align-items:center; justify-content:center; font-size:44px; color:#fff; }
+  .dl-top { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; }
+  .dl-person { display:flex; flex-direction:column; align-items:center; min-width:180px; }
+  .dl-person .ava { width:90px; height:90px; border-radius:50%; background:#d6d9de; display:flex; align-items:center; justify-content:center; font-size:44px; }
   .dl-person .nm { color:#213d7b; font-weight:700; font-size:16px; margin-top:6px; }
   .dl-person .br { color:#111; font-weight:700; margin-top:4px; }
-  .dl-stats { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+  .dl-stats { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .dl-stat { color:#fff; padding:10px 18px; border-radius:2px; font-weight:700; font-size:16px; text-decoration:underline; }
   .dl-stat.green { background:#22c55e; }
   .dl-stat.black { background:#000; }
-  .dl-acts { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .dl-acts { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
   .dl-bar { background:#213d7b; color:#fff; border-radius:4px; padding:12px 16px; margin-top:12px; display:flex; align-items:center; gap:14px; cursor:pointer; }
   .dl-bar .t { flex:1; text-align:right; font-weight:700; font-size:15px; }
-  .dl-bar img { height:34px; }
-  .dl-table { width:100%; border-collapse:collapse; background:#fff; color:#222; margin-top:6px; }
+  .dl-table { width:100%; border-collapse:collapse; background:#fff; color:#222; }
   .dl-table th, .dl-table td { padding:8px; border-bottom:1px solid #e5e9f0; text-align:right; font-size:13px; }
   .dl-table th { background:#f5f7fb; }
   .dl-msg { margin-top:10px; font-size:14px; }
@@ -35571,17 +35569,19 @@ overflow: scroll;
     <div class="dl-filter">
       <label>المندوب</label>
       <select class="dl-select" id="delegateSel"></select>
+      <label>شيت</label>
+      <select class="dl-select" id="sheetSel"></select>
       <button class="dl-pill" id="searchBtn">بحث</button>
     </div>
   </div>
 
-  <div class="dl-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px">
-    <div class="dl-person">
-      <div class="ava">&#128100;</div>
-      <div class="nm" id="dName">—</div>
-      <div class="br">الفرع: الفرع الرئيسي</div>
-    </div>
-    <div style="flex:1">
+  <div class="dl-card">
+    <div class="dl-top">
+      <div class="dl-person">
+        <div class="ava">&#128100;</div>
+        <div class="nm" id="dName">—</div>
+        <div class="br">الفرع: الفرع الرئيسي</div>
+      </div>
       <div class="dl-stats">
         <span class="dl-stat green">الرصيد 0</span>
         <span class="dl-stat black">السلف 0</span>
@@ -36039,9 +36039,9 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
   }
   var RULES=[
     ['شحنات المناديب','delegates.html'],
-    ['شحنات الراسلين','operations.html?view=senders'],
-    ['المؤجلات','operations.html?view=postponed'],
-    ['تجاوزت أيام','operations.html?view=overdue'],
+    ['شحنات الراسلين','senders.html'],
+    ['المؤجلات','postponed.html'],
+    ['تجاوزت أيام','overdue.html'],
     ['كافة الشحنات','operations.html?view=all'],
     ['متابعة المرتجعات','operations.html?view=returns'],
     ['فحص الشحنات','operations.html?view=barcode'],
@@ -36091,9 +36091,9 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
 (function(){
   var API_URL = 'https://script.google.com/macros/s/AKfycbyPokS7kJwjmssWpktMUfzsjduG6wM9GcjLliKmGNt1buq5FWmUmlkxyEqTa6mHWmqfsQ/exec';
   var token = sessionStorage.getItem('token') || '';
-  var delegate = '';
   var $ = function(id){ return document.getElementById(id); };
   var GROUPS = ['في التوصيل','في الطريق الي الراسل'];
+  var delegate = '', sheetDate = '', lastRows = [];
 
   function api(action, data){
     return fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -36107,69 +36107,64 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
   function say(t, ok){ var el=$('dlMsg'); el.textContent=t; el.style.color = ok ? '#15803d' : '#b91c1c'; }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
-  function loadDelegates(){
-    return api('delegates').then(function(r){
-      var sel=$('delegateSel'); sel.innerHTML='<option value="">من فضلك اختار</option>';
-      r.delegates.forEach(function(d){ var o=document.createElement('option'); o.value=d.name; o.textContent=d.name+' ('+d.count+')'; sel.appendChild(o); });
+  function loadFilters(){
+    return Promise.all([api('delegates'), api('sheets')]).then(function(res){
+      var d=$('delegateSel'); d.innerHTML='<option value="">من فضلك اختار</option>';
+      res[0].delegates.forEach(function(x){ var o=document.createElement('option'); o.value=x.name; o.textContent=x.name+' ('+x.count+')'; d.appendChild(o); });
+      var s=$('sheetSel'); s.innerHTML='<option value="">كل الشيتات</option>';
+      res[1].sheets.forEach(function(x){ var o=document.createElement('option'); o.value=x.date; o.textContent='شيت '+x.date+' ('+x.count+')'; s.appendChild(o); });
     });
   }
 
-  function loadGroups(){
-    if (!delegate) return Promise.resolve();
-    $('dName').textContent = delegate;
-    return Promise.all([api('groups', {delegate: delegate}), api('shipments', {view:'delegates', delegate: delegate, limit: 2000})])
-    .then(function(res){
-      var groups = res[0].groups, rows = res[1].shipments;
-      var total = rows.length;
-      $('dCount').textContent = 'عدد الشحنات ' + total;
+  function load(){
+    var filters = {view:'delegates', delegate: delegate, limit: 2000};
+    if (sheetDate) { filters.date_from = sheetDate; filters.date_to = sheetDate; }
+    return Promise.all([api('groups', {delegate: delegate}), api('shipments', filters)]).then(function(res){
+      var groups = res[0].groups; lastRows = res[1].shipments;
+      $('dName').textContent = delegate;
+      $('dCount').textContent = 'عدد الشحنات ' + lastRows.length;
+      var today = new Date().toISOString().slice(0,10), sum = 0;
+      lastRows.forEach(function(r){ if (r.status==='تم الاستلام في المخزن' && String(r.updated_at||'').slice(0,10)===today) sum += Number(r.cod_amount)||0; });
+      $('sumToday').textContent = sum;
       var box=$('groups'); box.innerHTML='';
       GROUPS.forEach(function(name){
         var g = groups.find(function(x){ return x.status===name; }) || {count:0};
-        var wrap=document.createElement('div');
-        wrap.innerHTML = '<div class="dl-bar" data-status="'+esc(name)+'"><input type="checkbox"><span class="t">'+esc(name)+' ('+g.count+')</span></div><div class="dl-card dl-hidden" data-body="'+esc(name)+'"></div>';
-        box.appendChild(wrap);
+        var bar=document.createElement('div'); bar.className='dl-bar';
+        bar.innerHTML = '<input type="checkbox" class="gsel" data-status="'+esc(name)+'"><span class="t">'+esc(name)+' ('+g.count+')</span>';
+        var body=document.createElement('div'); body.className='dl-card dl-hidden';
+        bar.onclick = function(e){ if (e.target.tagName==='INPUT') return; if (body.classList.contains('dl-hidden')) fillTable(body, name); body.classList.toggle('dl-hidden'); };
+        box.appendChild(bar); box.appendChild(body);
       });
-      box.querySelectorAll('.dl-bar').forEach(function(bar){
-        bar.onclick = function(e){
-          if (e.target.tagName==='INPUT') return;
-          var body = box.querySelector('[data-body="'+bar.dataset.status+'"]');
-          if (body.classList.contains('dl-hidden')) fillTable(body, bar.dataset.status, rows);
-          body.classList.toggle('dl-hidden');
-        };
-      });
+      say(lastRows.length ? '' : 'مفيش شحنات للمندوب ده بالفلتر ده', lastRows.length>0);
     });
   }
 
-  function fillTable(body, status, rows){
-    var list = rows.filter(function(r){ return r.status===status; });
+  function fillTable(body, status){
+    var list = lastRows.filter(function(r){ return r.status===status; });
     var html = '<table class="dl-table"><thead><tr><th><input type="checkbox" class="all"></th><th>البوليصة</th><th>العميل</th><th>الموبايل</th><th>المنطقة</th><th>الوزن</th><th>التحصيل</th><th>الحالة</th></tr></thead><tbody>';
     list.forEach(function(s){
-      html += '<tr><td><input type="checkbox" class="rs" value="'+esc(s.id)+'"></td><td>'+esc(s.id)+'</td><td>'+esc(s.customer_name)+'</td><td>'+esc(s.phone)+'</td><td>'+esc(s.area_name)+'</td><td>'+esc(s.weight)+'</td><td>'+esc(s.cod_amount)+'</td><td>'+esc(s.status)+'</td></tr>';
+      html += '<tr><td><input type="checkbox" class="rs" data-status="'+esc(status)+'" value="'+esc(s.id)+'"></td><td>'+esc(s.id)+'</td><td>'+esc(s.customer_name)+'</td><td>'+esc(s.phone)+'</td><td>'+esc(s.area_name)+'</td><td>'+esc(s.weight)+'</td><td>'+esc(s.cod_amount)+'</td><td>'+esc(s.status)+'</td></tr>';
     });
     if (!list.length) html += '<tr><td colspan="8">مفيش شحنات</td></tr>';
-    html += '</tbody></table>';
-    body.innerHTML = html;
+    body.innerHTML = html + '</tbody></table>';
     var all = body.querySelector('.all');
     if (all) all.onchange = function(){ body.querySelectorAll('.rs').forEach(function(c){ c.checked = all.checked; }); };
   }
 
-  function selectedIds(){
-    return Array.prototype.map.call(document.querySelectorAll('.rs:checked'), function(c){ return c.value; });
-  }
+  function selectedIds(){ return Array.prototype.map.call(document.querySelectorAll('.rs:checked'), function(c){ return c.value; }); }
 
   function setStatusFor(status){
     var ids = selectedIds();
     if (!ids.length) return say('اختار شحنة واحدة على الأقل من الجدول', false);
-    api('setStatus', {ids: ids, status: status}).then(function(r){
-      say('تم تحديث '+r.updated+' شحنة', true);
-      return loadGroups();
-    }).catch(function(e){ say(e.message, false); });
+    api('setStatus', {ids: ids, status: status}).then(function(r){ say('تم تحديث '+r.updated+' شحنة', true); return load(); })
+      .catch(function(e){ say(e.message, false); });
   }
 
   $('searchBtn').onclick = function(){
     delegate = $('delegateSel').value;
+    sheetDate = $('sheetSel').value;
     if (!delegate) return say('اختار المندوب الأول', false);
-    loadGroups().catch(function(e){ say(e.message, false); });
+    load().catch(function(e){ say(e.message, false); });
   };
   $('actStore').onclick = function(){ setStatusFor('تم الاستلام في المخزن'); };
   $('actSame').onclick = function(){ setStatusFor('تم الاستلام في المخزن'); };
@@ -36177,7 +36172,8 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
   $('actDelegate').onclick = function(){
     var ids = selectedIds();
     if (!ids.length) return say('اختار شحنة واحدة على الأقل من الجدول', false);
-    api('assignDelegate', {ids: ids, delegate: delegate}).then(function(r){ say('تم تحديث '+r.updated+' شحنة', true); return loadGroups(); }).catch(function(e){ say(e.message, false); });
+    api('assignDelegate', {ids: ids, delegate: delegate}).then(function(r){ say('تم تحديث '+r.updated+' شحنة', true); return load(); })
+      .catch(function(e){ say(e.message, false); });
   };
 
   $('loginBtn').onclick = function(){
@@ -36187,10 +36183,7 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
   };
 
   if (!token) { $('guard').classList.remove('dl-hidden'); }
-  else {
-    $('app').classList.remove('dl-hidden');
-    loadDelegates().catch(function(e){ say(e.message, false); });
-  }
+  else { $('app').classList.remove('dl-hidden'); loadFilters().catch(function(e){ say(e.message, false); }); }
 })();
 </script>
 </body>
