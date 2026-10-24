@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>شحنات فيد التشغيل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root { --navy:#213d7b; --orange:#ec6821; --bg:#eef1f5; --red:#b91c1c; --green:#15803d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Cairo,Tahoma,sans-serif; background:var(--bg); color:#222; font-size:14px; }
+  header { background:var(--navy); color:#fff; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { font-size:17px; margin:0; }
+  header .who { display:flex; gap:10px; align-items:center; }
+  .btn { background:var(--navy); color:#fff; border:0; border-radius:20px; padding:8px 18px; font:inherit; cursor:pointer; }
+  .btn.gray { background:#64748b; }
+  .btn.orange { background:var(--orange); }
+  .btn[disabled] { opacity:.6; cursor:default; }
+  main { padding:18px 22px; }
+  .card { background:#fff; border-radius:6px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
+  .gcard { background:#fff; border-radius:6px; padding:12px; border-right:5px solid var(--orange); cursor:pointer; }
+  .gcard.active { background:var(--navy); color:#fff; }
+  .gcard .n { font-size:22px; font-weight:700; }
+  .gcard .t { color:#666; font-size:12px; }
+  .gcard.active .t { color:#dbe4ff; }
+  .filters { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+  .filters label { display:block; font-size:12px; color:#555; margin-bottom:3px; }
+  input, select { height:36px; border:1px solid #cfd6e0; border-radius:4px; padding:0 8px; font:inherit; background:#fff; }
+  table { width:100%; border-collapse:collapse; background:#fff; }
+  th, td { padding:8px; border-bottom:1px solid #e5e9f0; text-align:right; font-size:13px; }
+  th { background:#f5f7fb; color:#334155; }
+  .bulk { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .msg { margin-top:8px; font-size:13px; min-height:18px; }
+  .ok { color:var(--green); } .err { color:var(--red); }
+  .hidden { display:none !important; }
+  .del { color:var(--red); font-weight:700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>شحنات فيد التشغيل</h1>
+  <div class="who">
+    <span id="uname"></span>
+    <button class="btn gray" id="logoutBtn">خروج</button>
+  </div>
+</header>
+
+<main>
+  <div id="guard" class="card hidden" style="color:var(--red)">
+    لازم تسجل دخول الأول من <a href="shipments.html">صفحة الشحنات</a>، وبعدين ارجع هنا.
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="cards" id="cards"></div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="filters">
+        <div><label>بحث (بوليصة / موبايل / كود / اسم)</label><input id="search" placeholder="اكتب و اضغط Enter"></div>
+        <div><label>المندوب</label><input id="delegateF" placeholder="اسم المندوب"></div>
+        <div><label>المنطقة</label><select id="areaF"><option value="">الكل</option></select></div>
+        <div><label>من تاريخ</label><input type="date" id="dateFrom"></div>
+        <div><label>إلى تاريخ</label><input type="date" id="dateTo"></div>
+        <div><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="showDeleted"> عرض المحذوفات</label></div>
+        <div><label>&nbsp;</label><button class="btn" id="filterBtn">بحث</button></div>
+        <div><label>&nbsp;</label><button class="btn orange" id="exportBtn">تصدير Excel</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="bulk">
+        <span>المحدد: <b id="selCount">0</b></span>
+        <select id="bulkStatus"></select>
+        <button class="btn" id="applyStatusBtn">تغيير الحالة</button>
+        <input id="bulkDelegate" placeholder="اسم المندوب">
+        <button class="btn" id="applyDelegateBtn">تعيين مندوب</button>
+        <button class="btn gray" id="deleteBtn">حذف</button>
+        <button class="btn gray" id="restoreBtn">استرجاع</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th><input type="checkbox" id="selAll"></th>
+            <th>البوليصة</th><th>العميل</th><th>الموبايل</th><th>المنطقة</th>
+            <th>الوزن</th><th>التحصيل</th><th>الحالة</th><th>المندوب</th><th>التاريخ</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyPokS7kJwjmssWpktMUfzsjduG6wM9GcjLliKmGNt1buq5FWmUmlkxyEqTa6mHWmqfsQ/exec';
+  let token = sessionStorage.getItem('token') || '';
+  let currentStatus = '';
+  let currentRows = [];
+  const $ = id => document.getElementById(id);
+
+  function say(text, ok) { const el = $('msg'); el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); }
+
+  async function api(action, data = {}) {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, token, ...data })
+    });
+    let json;
+    try { json = JSON.parse(await res.text()); } catch (e) { throw new Error('الرابط مش بيرجع بيانات صح'); }
+    if (json.status !== 'success') {
+      if ((json.message || '').includes('انتهت الجلسة')) { sessionStorage.removeItem('token'); token = ''; }
+      throw new Error(json.message || 'حصل خطأ');
+    }
+    return json;
+  }
+
+  function fmtDate(v) { return v ? new Date(v).toLocaleString('ar-EG') : ''; }
+
+  function selectedIds() {
+    return [...document.querySelectorAll('.rowSel:checked')].map(c => c.value);
+  }
+
+  async function loadLists() {
+    const r = await api('lists');
+    const st = (r.lists.status || []);
+    $('bulkStatus').innerHTML = st.map(s => `<option value="${s}">${s}</option>`).join('');
+    const a = await api('areas');
+    $('areaF').innerHTML = '<option value="">الكل</option>' + a.areas.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+  }
+
+  async function loadGroups() {
+    const r = await api('groups');
+    $('cards').innerHTML = '';
+    r.groups.forEach(g => {
+      const div = document.createElement('div');
+      div.className = 'gcard' + (currentStatus === g.status ? ' active' : '');
+      div.innerHTML = `<div class="t">${g.status}</div><div class="n">${g.count}</div><div class="t">EGP ${Number(g.total_cod).toLocaleString('ar-EG')}</div>`;
+      div.onclick = () => { currentStatus = g.status; loadGroups(); loadRows(); };
+      $('cards').appendChild(div);
+    });
+  }
+
+  function filters() {
+    return {
+      status: currentStatus,
+      search: $('search').value.trim(),
+      delegate: $('delegateF').value.trim(),
+      area_id: $('areaF').value,
+      date_from: $('dateFrom').value,
+      date_to: $('dateTo').value,
+      deleted: $('showDeleted').checked ? 'only' : false,
+      limit: 2000
+    };
+  }
+
+  async function loadRows() {
+    try {
+      const r = await api('shipments', filters());
+      currentRows = r.shipments;
+      const tb = $('rows'); tb.innerHTML = '';
+      r.shipments.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="checkbox" class="rowSel" value="${s.id}"></td>
+          <td>${s.id}</td><td>${s.customer_name || ''}</td><td>${s.phone || ''}</td>
+          <td>${s.area_name || ''}</td><td>${s.weight ?? ''}</td><td>${s.cod_amount ?? ''}</td>
+          <td>${s.status || ''}</td><td>${s.delegate || ''}</td><td>${fmtDate(s.created_at)}</td>`;
+        tb.appendChild(tr);
+      });
+      say(r.shipments.length ? `عدد الشحنات: ${r.shipments.length}` : 'مفيش شحنات بالفلاتر دي', true);
+      updateSel();
+    } catch (e) { say(e.message, false); }
+  }
+
+  function updateSel() { $('selCount').textContent = selectedIds().length; }
+
+  async function bulk(action, extra) {
+    const ids = selectedIds();
+    if (!ids.length) return say('اختار شحنة واحدة على الأقل', false);
+    try {
+      const r = await api(action, { ids, ...extra });
+      say(`تم تحديث ${r.updated} شحنة`, true);
+      await loadGroups(); await loadRows();
+    } catch (e) { say(e.message, false); }
+  }
+
+  $('applyStatusBtn').onclick = () => bulk('setStatus', { status: $('bulkStatus').value });
+  $('applyDelegateBtn').onclick = () => bulk('assignDelegate', { delegate: $('bulkDelegate').value.trim() });
+  $('deleteBtn').onclick = () => { if (confirm('تحذف الشحنات المحددة؟')) bulk('softDelete'); };
+  $('restoreBtn').onclick = () => bulk('restore');
+  $('filterBtn').onclick = loadRows;
+  $('search').addEventListener('keydown', e => { if (e.key === 'Enter') loadRows(); });
+  $('showDeleted').onchange = loadRows;
+  $('selAll').onchange = e => { document.querySelectorAll('.rowSel').forEach(c => c.checked = e.target.checked); updateSel(); };
+  $('rows').addEventListener('change', e => { if (e.target.classList.contains('rowSel')) updateSel(); });
+
+  $('exportBtn').onclick = () => {
+    if (!currentRows.length) return say('مفيش بيانات للتصدير', false);
+    const data = currentRows.map(s => ({
+      'البوليصة': s.id, 'العميل': s.customer_name, 'الموبايل': s.phone, 'الموبايل 2': s.phone2,
+      'المنطقة': s.area_name, 'العنوان': s.address, 'الوزن': s.weight, 'التحصيل': s.cod_amount,
+      'الحالة': s.status, 'المندوب': s.delegate, 'الراسل': s.sender, 'التاريخ': fmtDate(s.created_at)
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الشحنات');
+    XLSX.writeFile(wb, 'shipments.xlsx');
+  };
+
+  $('logoutBtn').onclick = async () => {
+    try { await api('logout'); } catch (e) {}
+    sessionStorage.removeItem('token'); location.href = 'shipments.html';
+  };
+
+  async function init() {
+    if (!token) { $('guard').classList.remove('hidden'); return; }
+    $('app').classList.remove('hidden');
+    $('uname').textContent = sessionStorage.getItem('username') || '';
+    try {
+      await loadLists();
+      await loadGroups();
+      await loadRows();
+    } catch (e) {
+      say(e.message, false);
+      if (!token) { $('app').classList.add('hidden'); $('guard').classList.remove('hidden'); }
+    }
+  }
+  init();
+</script>
+</body>
+</html>
