@@ -36057,28 +36057,52 @@ var arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /�
     var el=document.getElementById('siteNote');
     el.textContent=t; el.style.display='block';
     clearTimeout(window.__siteNoteT);
-    window.__siteNoteT=setTimeout(function(){ el.style.display='none'; },3500);
+    window.__siteNoteT=setTimeout(function(){ el.style.display='none'; },2500);
   }
-  var SHIP=/shipping|shipment|courier/i;
+  var RULES=[
+    ['شحنات المناديب','operations.html?view=delegates'],
+    ['شحنات الراسلين','operations.html?view=senders'],
+    ['المؤجلات','operations.html?view=postponed'],
+    ['تجاوزت أيام','operations.html?view=overdue'],
+    ['كافة الشحنات','operations.html?view=all'],
+    ['متابعة المرتجعات','operations.html?view=returns'],
+    ['فحص الشحنات','operations.html?view=barcode'],
+    ['قراءة الباركود','operations.html?view=barcode'],
+    ['الشحنات المحذوفة','operations.html?view=deleted'],
+    ['اضافة شحنة','add-shipment.html'],
+    ['إضافة شحنة','add-shipment.html'],
+    ['شحنات قيد التشغيل','operations.html?view=all'],
+    ['الشحنات المتأخرة','operations.html?view=late'],
+    ['شحنات بدون مناطق','operations.html?view=no_area'],
+    ['تصدير الشحنات','operations.html?view=export']
+  ];
+  function target(text, href){
+    var t=(text||'').replace(/\s+/g,' ');
+    for (var i=0;i<RULES.length;i++){ if (t.indexOf(RULES[i][0])!==-1) return RULES[i][1]; }
+    if (/shipping|shipment|courier|delayed|export/i.test(href)) return 'operations.html?view=all';
+    return null;
+  }
   document.addEventListener('click', function(e){
     var a=e.target.closest ? e.target.closest('a[href]') : null;
     if(!a) return;
     var href=a.getAttribute('href')||'';
     if(!/\.php/i.test(href)) return;
     e.preventDefault(); e.stopPropagation();
-    if(SHIP.test(href)){ window.location.href=/action=add/.test(href)?'add-shipment.html':'shipments.html'; return; }
-    if(/^index\.php/i.test(href)) return;
-    note('الصفحة دي محتاجة السيرفر الأصلي، ومش متاحة على الموقع ده');
+    var dest=target(a.textContent, href);
+    if(dest){ window.location.href=dest; return; }
+    note('الصفحة دي هتتعمل قريباً');
   }, true);
   document.addEventListener('submit', function(e){
     var act=e.target.getAttribute('action')||'';
     if(!/\.php/i.test(act)) return;
     e.preventDefault(); e.stopPropagation();
-    if(SHIP.test(act)){ window.location.href=/action=add/.test(act)?'add-shipment.html':'shipments.html'; return; }
-    note('الفورم ده محتاج السيرفر الأصلي، ومش متاح على الموقع ده');
+    var dest=target('', act);
+    if(dest){ window.location.href=dest; return; }
+    note('الفورم ده هيتعمل قريباً');
   }, true);
 })();
 </script>
+
 
 <script>
 (function(){
