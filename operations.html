@@ -40,7 +40,7 @@
 </head>
 <body>
 <header>
-  <h1>شحنات فيد التشغيل</h1>
+  <h1 id="pageTitle">شحنات فيد التشغيل</h1>
   <div class="who">
     <span id="uname"></span>
     <button class="btn gray" id="logoutBtn">خروج</button>
@@ -96,7 +96,10 @@
 <script>
   const API_URL = 'https://script.google.com/macros/s/AKfycbyPokS7kJwjmssWpktMUfzsjduG6wM9GcjLliKmGNt1buq5FWmUmlkxyEqTa6mHWmqfsQ/exec';
   let token = sessionStorage.getItem('token') || '';
-  let currentStatus = '';
+  const params = new URLSearchParams(location.search);
+  const VIEW = params.get('view') || 'all';
+  const VIEW_TITLES = {all:'كافة الشحنات', delegates:'شحنات المناديب', senders:'شحنات الراسلين', postponed:'المؤجلات', overdue:'شحنات تجاوزت أيام التشغيل', returns:'متابعة المرتجعات', late:'الشحنات المتأخرة', no_area:'شحنات بدون مناطق', deleted:'الشحنات المحذوفة', export:'تصدير الشحنات', barcode:'فحص الشحنات بالباركود'};
+  let currentStatus = params.get('status') || '';
   let currentRows = [];
   const $ = id => document.getElementById(id);
 
@@ -145,6 +148,7 @@
 
   function filters() {
     return {
+      view: VIEW,
       status: currentStatus,
       search: $('search').value.trim(),
       delegate: $('delegateF').value.trim(),
@@ -228,6 +232,8 @@
       if (!token) { $('app').classList.add('hidden'); $('guard').classList.remove('hidden'); }
     }
   }
+  $('pageTitle').textContent = VIEW_TITLES[VIEW] || 'شحنات فيد التشغيل';
+  if (VIEW === 'deleted') $('showDeleted').checked = true;
   init();
 </script>
 </body>
